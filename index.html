@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Interval Beeper</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    button {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+    }
+    input {
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Custom Interval Beeper</h1>
+  <p>Configure your sequence below:</p>
+  <label>
+    Number of Intervals: 
+    <input id="numIntervalsInput" type="number" value="5" min="1" style="width: 50px;">
+  </label><br>
+  <label>
+    Interval Duration (seconds): 
+    <input id="intervalInput" type="number" value="10" min="1" style="width: 50px;">
+  </label><br>
+  <label>
+    Beep Duration (seconds): 
+    <input id="beepDurationInput" type="number" value="1" min="1" style="width: 50px;">
+  </label><br>
+  <button id="startButton">Start</button>
+  <button id="stopButton" disabled>Stop</button>
+  <p id="status">Status: Stopped</p>
+
+  <script>
+    let intervalId;
+    let beepContext;
+
+    // Function to play a beep sound
+    function playBeep() {
+      if (!beepContext) beepContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = beepContext.createOscillator();
+      const gainNode = beepContext.createGain();
+
+      oscillator.type = 'sine'; // Sine wave for beep
+      oscillator.frequency.setValueAtTime(440, beepContext.currentTime); // Frequency (Hz)
+      gainNode.gain.setValueAtTime(0.5, beepContext.currentTime); // Volume
+
+      oscillator.connect(gainNode);
+      gainNode.connect(beepContext.destination);
+
+      oscillator.start();
+      oscillator.stop(beepContext.currentTime + 0.2); // Short beep duration (0.2 seconds)
+    }
+
+    // Function to play multiple beeps in succession
+    function playMultipleBeeps(count, callback) {
+      let beepsPlayed = 0;
+      const beepInterval = setInterval(() => {
+        playBeep();
+        beepsPlayed++;
+        if (beepsPlayed >= count) {
+          clearInterval(beepInterval);
+          if (callback) callback();
+        }
+      }, 500); // Beep every 0.5 seconds
+    }
+
+    // Start the interval sequence
+    document.getElementById('startButton').addEventListener('click', () => {
+      const numIntervals = parseInt(document.getElementById('numIntervalsInput').value, 10);
+      const intervalDuration = parseInt(document.getElementById('intervalInput').value, 10) * 1000;
+      const beepDuration = parseInt(document.getElementById('beepDurationInput').value, 10);
+
+      if (isNaN(numIntervals) || isNaN(intervalDuration) || isNaN(beepDuration) || numIntervals <= 0 || intervalDuration <= 0 || beepDuration <= 0) {
+        alert('Please enter valid values for all fields.');
+        return;
+      }
+
+      document.getElementById('status').textContent = 'Status: Pre-Start Beeps';
+      document.getElementById('startButton').disabled = true;
+      document.getElementById('stopButton').disabled = false;
+
+      // Pre-start beeps
+      playMultipleBeeps(5, () => {
+        document.getElementById('status').textContent = 'Status: Running';
+
+        // Delay before the first interval starts
+        setTimeout(() => {
+          let currentInterval = 0;
+
+          // Play the first beep immediately, then set up the interval
+          playBeep();
+          currentInterval++;
+
+          intervalId = setInterval(() => {
+            if (currentInterval >= numIntervals) {
+              clearInterval(intervalId);
+              document.getElementById('status').textContent = 'Status: Post-End Beeps';
+              playMultipleBeeps(5, () => {
+                document.getElementById('status').textContent = 'Status: Completed';
+                document.getElementById('startButton').disabled = false;
+                document.getElementById('stopButton').disabled = true;
+              });
+              return;
+            }
+
+            playBeep();
+            currentInterval++;
+          }, intervalDuration);
+        }, 3000); // 3-second delay after pre-start beeps
+      });
+    });
+
+    // Stop the sequence
+    document.getElementById('stopButton').addEventListener('click', () => {
+      clearInterval(intervalId);
+      document.getElementById('status').textContent = 'Status: Stopped';
+      document.getElementById('startButton').disabled = false;
+      document.getElementById('stopButton').disabled = true;
+    });
+  </script>
+</body>
+</html>
