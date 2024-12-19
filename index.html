@@ -44,8 +44,8 @@
     let intervalId;
     let beepContext;
 
-    // Function to play a beep sound
-    function playBeep() {
+    // Function to play a beep sound for a specified duration
+    function playBeep(duration) {
       if (!beepContext) beepContext = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = beepContext.createOscillator();
       const gainNode = beepContext.createGain();
@@ -58,14 +58,14 @@
       gainNode.connect(beepContext.destination);
 
       oscillator.start();
-      oscillator.stop(beepContext.currentTime + 0.2); // Short beep duration (0.2 seconds)
+      oscillator.stop(beepContext.currentTime + duration); // Beep duration
     }
 
     // Function to play multiple beeps in succession
     function playMultipleBeeps(count, callback) {
       let beepsPlayed = 0;
       const beepInterval = setInterval(() => {
-        playBeep();
+        playBeep(0.2); // Short beep for pre-start or post-end tones
         beepsPlayed++;
         if (beepsPlayed >= count) {
           clearInterval(beepInterval);
@@ -77,11 +77,16 @@
     // Start the interval sequence
     document.getElementById('startButton').addEventListener('click', () => {
       const numIntervals = parseInt(document.getElementById('numIntervalsInput').value, 10);
-      const intervalDuration = parseInt(document.getElementById('intervalInput').value, 10) * 1000;
+      const intervalDuration = parseInt(document.getElementById('intervalInput').value, 10) * 1000; // Convert to ms
       const beepDuration = parseInt(document.getElementById('beepDurationInput').value, 10);
 
       if (isNaN(numIntervals) || isNaN(intervalDuration) || isNaN(beepDuration) || numIntervals <= 0 || intervalDuration <= 0 || beepDuration <= 0) {
         alert('Please enter valid values for all fields.');
+        return;
+      }
+
+      if (beepDuration * 1000 > intervalDuration) {
+        alert('Beep duration cannot exceed the interval duration. Please adjust the values.');
         return;
       }
 
@@ -98,7 +103,7 @@
           let currentInterval = 0;
 
           // Play the first beep immediately, then set up the interval
-          playBeep();
+          playBeep(beepDuration);
           currentInterval++;
 
           intervalId = setInterval(() => {
@@ -113,7 +118,7 @@
               return;
             }
 
-            playBeep();
+            playBeep(beepDuration);
             currentInterval++;
           }, intervalDuration);
         }, 3000); // 3-second delay after pre-start beeps
