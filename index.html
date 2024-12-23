@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Custom Interval Beeper</title>
+  <title>Custom Interval Speaker</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,7 +22,7 @@
   </style>
 </head>
 <body>
-  <h1>Custom Interval Beeper</h1>
+  <h1>Custom Interval Speaker</h1>
   <p>Configure your sequence below:</p>
   <label>
     Number of Intervals: 
@@ -32,97 +32,67 @@
     Interval Duration (seconds): 
     <input id="intervalInput" type="number" value="10" min="1" style="width: 50px;">
   </label><br>
-  <label>
-    Beep Duration (seconds): 
-    <input id="beepDurationInput" type="number" value="1" min="1" style="width: 50px;">
-  </label><br>
   <button id="startButton">Start</button>
   <button id="stopButton" disabled>Stop</button>
   <p id="status">Status: Stopped</p>
 
   <script>
     let intervalId;
-    let beepContext;
 
-    // Function to play a beep sound for a specified duration
-    function playBeep(duration) {
-      if (!beepContext) beepContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = beepContext.createOscillator();
-      const gainNode = beepContext.createGain();
-
-      oscillator.type = 'sine'; // Sine wave for beep
-      oscillator.frequency.setValueAtTime(440, beepContext.currentTime); // Frequency (Hz)
-      gainNode.gain.setValueAtTime(0.5, beepContext.currentTime); // Volume
-
-      oscillator.connect(gainNode);
-      gainNode.connect(beepContext.destination);
-
-      oscillator.start();
-      oscillator.stop(beepContext.currentTime + duration); // Beep duration
-    }
-
-    // Function to play multiple beeps in succession
-    function playMultipleBeeps(count, callback) {
-      let beepsPlayed = 0;
-      const beepInterval = setInterval(() => {
-        playBeep(0.2); // Short beep for pre-start or post-end tones
-        beepsPlayed++;
-        if (beepsPlayed >= count) {
-          clearInterval(beepInterval);
-          if (callback) callback();
-        }
-      }, 500); // Beep every 0.5 seconds
+    // Function to speak a message
+    function speakMessage(message) {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.lang = 'en-US';
+        utterance.pitch = 1;
+        utterance.rate = 1;
+        utterance.volume = 1;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert('Sorry, your browser does not support speech synthesis.');
+      }
     }
 
     // Start the interval sequence
     document.getElementById('startButton').addEventListener('click', () => {
       const numIntervals = parseInt(document.getElementById('numIntervalsInput').value, 10);
       const intervalDuration = parseInt(document.getElementById('intervalInput').value, 10) * 1000; // Convert to ms
-      const beepDuration = parseInt(document.getElementById('beepDurationInput').value, 10);
 
-      if (isNaN(numIntervals) || isNaN(intervalDuration) || isNaN(beepDuration) || numIntervals <= 0 || intervalDuration <= 0 || beepDuration <= 0) {
+      if (isNaN(numIntervals) || isNaN(intervalDuration) || numIntervals <= 0 || intervalDuration <= 0) {
         alert('Please enter valid values for all fields.');
         return;
       }
 
-      if (beepDuration * 1000 > intervalDuration) {
-        alert('Beep duration cannot exceed the interval duration. Please adjust the values.');
-        return;
-      }
-
-      document.getElementById('status').textContent = 'Status: Pre-Start Beeps';
+      document.getElementById('status').textContent = 'Status: Get Ready';
       document.getElementById('startButton').disabled = true;
       document.getElementById('stopButton').disabled = false;
 
-      // Pre-start beeps
-      playMultipleBeeps(5, () => {
+      // Pre-start message
+      speakMessage('Get ready');
+
+      // Delay before the first interval starts
+      setTimeout(() => {
         document.getElementById('status').textContent = 'Status: Running';
+        let currentInterval = 0;
 
-        // Delay before the first interval starts
-        setTimeout(() => {
-          let currentInterval = 0;
+        // Speak "Press reset" immediately, then set up the interval
+        speakMessage('Press reset');
+        currentInterval++;
 
-          // Play the first beep immediately, then set up the interval
-          playBeep(beepDuration);
+        intervalId = setInterval(() => {
+          if (currentInterval >= numIntervals) {
+            clearInterval(intervalId);
+            document.getElementById('status').textContent = 'Status: Sequence Complete';
+            speakMessage('Now sequence complete');
+            document.getElementById('startButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+            return;
+          }
+
+          speakMessage('Press reset');
           currentInterval++;
-
-          intervalId = setInterval(() => {
-            if (currentInterval >= numIntervals) {
-              clearInterval(intervalId);
-              document.getElementById('status').textContent = 'Status: Post-End Beeps';
-              playMultipleBeeps(5, () => {
-                document.getElementById('status').textContent = 'Status: Completed';
-                document.getElementById('startButton').disabled = false;
-                document.getElementById('stopButton').disabled = true;
-              });
-              return;
-            }
-
-            playBeep(beepDuration);
-            currentInterval++;
-          }, intervalDuration);
-        }, 3000); // 3-second delay after pre-start beeps
-      });
+        }, intervalDuration);
+      }, 3000); // 3-second delay after "Get ready"
     });
 
     // Stop the sequence
@@ -131,6 +101,7 @@
       document.getElementById('status').textContent = 'Status: Stopped';
       document.getElementById('startButton').disabled = false;
       document.getElementById('stopButton').disabled = true;
+      speakMessage('Sequence stopped');
     });
   </script>
 </body>
